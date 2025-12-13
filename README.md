@@ -2,7 +2,7 @@
 
 What will AI come up with for a Pomodoro timer to keep me focused on distractions?
 
-A command-line Pomodoro timer application with time tracking and statistics.
+A beautiful web-based GUI Pomodoro timer with time tracking and statistics.
 
 ## Features
 
@@ -10,82 +10,67 @@ A command-line Pomodoro timer application with time tracking and statistics.
 - ⏰ **5-minute break timer** - Take regular breaks
 - ⚙️ **Custom timer durations** - Set your own work and break times
 - 📊 **Daily time tracking** - Keep a running tally of your focused time
-- 📈 **Visual statistics** - See your productivity with charts
+- 📈 **Visual statistics** - See your productivity with beautiful charts
 - 💾 **Persistent data** - Track your progress across sessions
+- 🎨 **Modern GUI** - Beautiful, responsive web interface
+- 🔔 **Audio notifications** - Get notified when sessions complete
 
 ## Installation
 
-This application requires Python 3.6 or higher and uses only standard library modules.
+This application requires Python 3.6 or higher and Flask.
 
 ```bash
 # Clone the repository
 git clone https://github.com/Gnubee99/PomodoroAI.git
 cd PomodoroAI
 
-# Make the script executable (optional)
-chmod +x pomodoro.py
+# Install dependencies
+pip install -r requirements.txt
 ```
 
 ## Usage
 
-Run the Pomodoro timer:
+Start the Pomodoro timer web server:
 
 ```bash
-python3 pomodoro.py
+python3 pomodoro_gui.py
 ```
 
-### Menu Options
+Then open your browser to: **http://localhost:5000**
 
-1. **Start work session (25 minutes)** - Begin a standard Pomodoro work session
-2. **Start break (5 minutes)** - Take a 5-minute break
-3. **Custom work timer** - Set a custom duration for work
-4. **Custom break timer** - Set a custom duration for break
-5. **View statistics** - See your productivity stats and charts
-6. **Exit** - Close the application
+### GUI Features
+
+The web interface provides:
+
+1. **Work Session Button** - Start a 25-minute work session with one click
+2. **Break Button** - Start a 5-minute break session
+3. **Custom Timers** - Set custom durations for work or breaks (1-120 minutes)
+4. **Live Timer Display** - Large, easy-to-read countdown timer
+5. **Stop Button** - Pause or stop the current session
+6. **Today's Progress** - Real-time stats showing work time, break time, and session count
+7. **Recent Activity** - Visual history of your sessions with bar charts
 
 ### Features in Detail
 
 #### Timer Controls
-- The timer displays a live countdown
-- Press `Ctrl+C` to stop the timer early
-- Sessions longer than 1 minute can be optionally recorded when stopped early
-- Completed sessions are automatically recorded
+- Click any button to start a timer instantly
+- The timer updates in real-time with a smooth countdown
+- Visual indicators show whether you're in a work or break session
+- Stop button allows you to end sessions early (records if >1 minute)
+- Audio notification plays when a session completes
 
 #### Statistics
-- View daily breakdown of work and break time
-- Visual bar charts showing productivity
-- Track sessions over multiple days
-- See today's progress and weekly summaries
+- Today's progress displayed prominently with three stat cards
+- Work time, break time, and session counts updated live
+- Recent activity shows up to 7 days of history
+- Visual bar charts represent productivity (one bar per 25 minutes)
+- All stats persist across browser sessions
 
 #### Data Storage
 - All session data is stored in `~/.pomodoro_data.json`
 - Data persists across application restarts
 - Privacy-focused: all data stays on your local machine
-
-## Example Session
-
-```
-🍅 Welcome to PomodoroAI Timer!
-
-==================================================
-POMODORO TIMER
-==================================================
-1. Start work session (25 minutes)
-2. Start break (5 minutes)
-3. Custom work timer
-4. Custom break timer
-5. View statistics
-6. Exit
-==================================================
-
-Select an option (1-6): 1
-
-==================================================
-Starting work timer: 25:00
-==================================================
-Press Ctrl+C to stop the timer
-⏱  Time remaining: 24:32
-```
+- Accessible from any browser on your network
 
 ## Tips for Maximum Productivity
 
@@ -94,6 +79,15 @@ Press Ctrl+C to stop the timer
 3. **Review statistics** regularly to understand your patterns
 4. **Adjust custom times** to find what works best for you
 5. **Celebrate consistency** - building the habit is key!
+6. **Keep the browser tab visible** - The timer updates in real-time
+
+## Technical Details
+
+- **Backend**: Flask web server (Python)
+- **Frontend**: HTML5, CSS3, JavaScript (no frameworks needed)
+- **Data**: JSON file storage
+- **Port**: Runs on port 5000 by default
+- **Network**: Accessible at http://localhost:5000 or http://[your-ip]:5000
 
 ## License
 

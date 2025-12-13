@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 """
 Pomodoro Timer Application
-A command-line Pomodoro timer with time tracking and statistics.
+A web-based GUI Pomodoro timer with time tracking and statistics.
 """
 
-import time
-import sys
+from flask import Flask, render_template, jsonify, request
 import json
 from datetime import datetime, date
 from pathlib import Path
+import threading
+import time
 
+app = Flask(__name__)
 
 class PomodoroTimer:
     """Main Pomodoro Timer class with tracking capabilities."""
@@ -21,6 +23,12 @@ class PomodoroTimer:
     def __init__(self):
         """Initialize the Pomodoro timer."""
         self.data = self.load_data()
+        self.timer_running = False
+        self.remaining_seconds = 0
+        self.session_type = None
+        self.start_time = None
+        self.duration = 0
+        self.lock = threading.Lock()
     
     def load_data(self):
         """Load tracking data from file."""
@@ -38,11 +46,10 @@ class PomodoroTimer:
             with open(self.DATA_FILE, 'w') as f:
                 json.dump(self.data, f, indent=2)
         except IOError as e:
-            print(f"Warning: Could not save data: {e}", file=sys.stderr)
+            print(f"Warning: Could not save data: {e}")
     
     def record_session(self, duration_seconds, session_type="work"):
         """Record a completed session."""
-        # Validate session type
         if session_type not in ("work", "break"):
             raise ValueError(f"Invalid session_type: {session_type}. Must be 'work' or 'break'.")
         
@@ -64,179 +71,145 @@ class PomodoroTimer:
         
         self.save_data()
     
-    def format_time(self, seconds):
-        """Format seconds as MM:SS."""
-        minutes = seconds // 60
-        secs = seconds % 60
-        return f"{minutes:02d}:{secs:02d}"
+    def start_timer(self, duration_seconds, session_type="work"):
+        """Start a new timer."""
+        with self.lock:
+            self.timer_running = True
+            self.remaining_seconds = duration_seconds
+            self.session_type = session_type
+            self.start_time = time.time()
+            self.duration = duration_seconds
     
-    def run_timer(self, duration_seconds, session_type="work"):
-        """Run a countdown timer."""
-        print(f"\n{'='*50}")
-        print(f"Starting {session_type} timer: {self.format_time(duration_seconds)}")
-        print(f"{'='*50}")
-        print("Press Ctrl+C to stop the timer")
-        
-        start_time = time.time()
-        end_time = start_time + duration_seconds
-        
-        try:
-            while True:
-                current_time = time.time()
-                remaining = int(end_time - current_time)
-                
-                if remaining <= 0:
-                    break
-                
-                # Display timer
-                sys.stdout.write(f"\r⏱  Time remaining: {self.format_time(remaining)} ")
-                sys.stdout.flush()
-                time.sleep(0.5)
-            
-            # Timer completed
-            elapsed = int(time.time() - start_time)
-            print(f"\n\n✓ {session_type.capitalize()} session completed!")
-            print(f"Duration: {self.format_time(elapsed)}")
-            self.record_session(elapsed, session_type)
-            
-            # Play a bell sound (using system bell)
-            print("\a" * 3)
-            
-            return True
-            
-        except KeyboardInterrupt:
-            elapsed = int(time.time() - start_time)
-            print(f"\n\n⚠ Timer stopped early")
-            print(f"Time elapsed: {self.format_time(elapsed)}")
-            
-            if elapsed >= 60:  # Only record if at least 1 minute
-                response = input("Record this session? (y/n): ").strip().lower()
-                if response == 'y':
-                    self.record_session(elapsed, session_type)
-                    print("✓ Session recorded")
-            
-            return False
+    def stop_timer(self):
+        """Stop the current timer."""
+        with self.lock:
+            if self.timer_running:
+                elapsed = self.duration - self.remaining_seconds
+                if elapsed >= 60:  # Record if at least 1 minute
+                    self.record_session(elapsed, self.session_type)
+            self.timer_running = False
+            self.remaining_seconds = 0
+            self.session_type = None
     
-    def show_stats(self, days=7):
-        """Display statistics for recent days."""
-        print(f"\n{'='*50}")
-        print("POMODORO STATISTICS")
-        print(f"{'='*50}\n")
-        
+    def complete_timer(self):
+        """Complete the current timer and record session."""
+        with self.lock:
+            if self.timer_running:
+                self.record_session(self.duration, self.session_type)
+                self.timer_running = False
+                self.remaining_seconds = 0
+                self.session_type = None
+    
+    def tick(self):
+        """Update timer (call this periodically)."""
+        with self.lock:
+            if self.timer_running:
+                elapsed = time.time() - self.start_time
+                self.remaining_seconds = max(0, self.duration - int(elapsed))
+                if self.remaining_seconds <= 0:
+                    self.complete_timer()
+                    return True  # Timer completed
+        return False
+    
+    def get_status(self):
+        """Get current timer status."""
+        with self.lock:
+            return {
+                "running": self.timer_running,
+                "remaining": self.remaining_seconds,
+                "session_type": self.session_type,
+                "duration": self.duration
+            }
+    
+    def get_statistics(self, days=7):
+        """Get statistics for recent days."""
         if not self.data:
-            print("No sessions recorded yet.")
-            return
+            return []
         
-        # Get dates sorted in reverse order
         dates = sorted(self.data.keys(), reverse=True)[:days]
-        
-        total_work = 0
-        total_break = 0
+        stats = []
         
         for date_str in dates:
             day_data = self.data[date_str]
-            work_mins = day_data["work_time"] // 60
-            break_mins = day_data["break_time"] // 60
-            session_count = len(day_data["sessions"])
-            
-            total_work += day_data["work_time"]
-            total_break += day_data["break_time"]
-            
-            # Create visual bar chart
-            work_blocks = "█" * (work_mins // 25)
-            
-            print(f"{date_str}")
-            print(f"  Work:  {work_mins:3d} min {work_blocks}")
-            print(f"  Break: {break_mins:3d} min")
-            print(f"  Sessions: {session_count}")
-            print()
+            stats.append({
+                "date": date_str,
+                "work_time": day_data["work_time"] // 60,
+                "break_time": day_data["break_time"] // 60,
+                "sessions": len(day_data["sessions"])
+            })
         
-        # Today's stats
+        return stats
+    
+    def get_today_stats(self):
+        """Get today's statistics."""
         today = date.today().isoformat()
         if today in self.data:
-            print(f"{'='*50}")
-            print(f"TODAY'S PROGRESS")
-            print(f"{'='*50}")
-            today_work = self.data[today]["work_time"] // 60
-            today_break = self.data[today]["break_time"] // 60
-            print(f"Work time:  {today_work} minutes")
-            print(f"Break time: {today_break} minutes")
-            print(f"Sessions:   {len(self.data[today]['sessions'])}")
-        
-        # Overall stats
-        print(f"\n{'='*50}")
-        print(f"SUMMARY (Last {len(dates)} days)")
-        print(f"{'='*50}")
-        print(f"Total work time:  {total_work // 60} minutes ({total_work // 3600:.1f} hours)")
-        print(f"Total break time: {total_break // 60} minutes")
-        print()
+            day_data = self.data[today]
+            return {
+                "work_time": day_data["work_time"] // 60,
+                "break_time": day_data["break_time"] // 60,
+                "sessions": len(day_data["sessions"])
+            }
+        return {"work_time": 0, "break_time": 0, "sessions": 0}
 
 
-def print_menu():
-    """Display the main menu."""
-    print("\n" + "="*50)
-    print("POMODORO TIMER")
-    print("="*50)
-    print("1. Start work session (25 minutes)")
-    print("2. Start break (5 minutes)")
-    print("3. Custom work timer")
-    print("4. Custom break timer")
-    print("5. View statistics")
-    print("6. Exit")
-    print("="*50)
+# Global timer instance
+timer = PomodoroTimer()
 
-
-def get_custom_time():
-    """Get custom time from user."""
+# Background thread to update timer
+def timer_thread():
+    """Background thread that updates the timer."""
     while True:
-        try:
-            minutes = int(input("Enter duration in minutes: "))
-            if minutes > 0:
-                return minutes * 60
-            print("Please enter a positive number.")
-        except ValueError:
-            print("Please enter a valid number.")
+        timer.tick()
+        time.sleep(1)
+
+# Start background thread
+thread = threading.Thread(target=timer_thread, daemon=True)
+thread.start()
 
 
-def main():
-    """Main application entry point."""
-    timer = PomodoroTimer()
-    
-    print("\n🍅 Welcome to PomodoroAI Timer!")
-    
-    while True:
-        print_menu()
-        choice = input("\nSelect an option (1-6): ").strip()
-        
-        if choice == '1':
-            timer.run_timer(timer.DEFAULT_WORK_TIME, "work")
-        
-        elif choice == '2':
-            timer.run_timer(timer.DEFAULT_BREAK_TIME, "break")
-        
-        elif choice == '3':
-            duration = get_custom_time()
-            timer.run_timer(duration, "work")
-        
-        elif choice == '4':
-            duration = get_custom_time()
-            timer.run_timer(duration, "break")
-        
-        elif choice == '5':
-            timer.show_stats()
-        
-        elif choice == '6':
-            print("\n👋 Thanks for using PomodoroAI Timer!")
-            print("Stay focused and productive!\n")
-            sys.exit(0)
-        
-        else:
-            print("\n⚠ Invalid option. Please select 1-6.")
+@app.route('/')
+def index():
+    """Main page."""
+    return render_template('index.html')
 
 
-if __name__ == "__main__":
-    try:
-        main()
-    except KeyboardInterrupt:
-        print("\n\n👋 Goodbye!")
-        sys.exit(0)
+@app.route('/api/start', methods=['POST'])
+def start():
+    """Start a timer."""
+    data = request.json
+    duration = data.get('duration', timer.DEFAULT_WORK_TIME)
+    session_type = data.get('type', 'work')
+    timer.start_timer(duration, session_type)
+    return jsonify({"success": True})
+
+
+@app.route('/api/stop', methods=['POST'])
+def stop():
+    """Stop the timer."""
+    timer.stop_timer()
+    return jsonify({"success": True})
+
+
+@app.route('/api/status')
+def status():
+    """Get timer status."""
+    return jsonify(timer.get_status())
+
+
+@app.route('/api/stats')
+def stats():
+    """Get statistics."""
+    return jsonify({
+        "today": timer.get_today_stats(),
+        "history": timer.get_statistics()
+    })
+
+
+if __name__ == '__main__':
+    print("\n🍅 PomodoroAI Timer - Web GUI")
+    print("=" * 50)
+    print("Opening browser at: http://localhost:5000")
+    print("Press Ctrl+C to stop the server")
+    print("=" * 50 + "\n")
+    app.run(debug=False, host='0.0.0.0', port=5000)

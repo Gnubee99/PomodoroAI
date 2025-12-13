@@ -12,6 +12,10 @@ ENV/
 # Pomodoro data file (user-specific)
 .pomodoro_data.json
 
+# Flask
+instance/
+.webassets-cache
+
 # IDE
 .vscode/
 .idea/
