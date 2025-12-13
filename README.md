@@ -33,7 +33,7 @@ pip install -r requirements.txt
 Start the Pomodoro timer web server:
 
 ```bash
-python3 pomodoro_gui.py
+python3 pomodoro.py
 ```
 
 Then open your browser to: **http://localhost:5000**
