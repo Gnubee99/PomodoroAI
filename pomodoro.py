@@ -7,7 +7,6 @@ A command-line Pomodoro timer with time tracking and statistics.
 import time
 import sys
 import json
-import os
 from datetime import datetime, date
 from pathlib import Path
 
@@ -43,6 +42,10 @@ class PomodoroTimer:
     
     def record_session(self, duration_seconds, session_type="work"):
         """Record a completed session."""
+        # Validate session type
+        if session_type not in ("work", "break"):
+            raise ValueError(f"Invalid session_type: {session_type}. Must be 'work' or 'break'.")
+        
         today = date.today().isoformat()
         
         if today not in self.data:
