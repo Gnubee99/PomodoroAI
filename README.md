@@ -28,6 +28,55 @@ cd PomodoroAI
 pip install -r requirements.txt
 ```
 
+## Docker Installation (Alternative)
+
+If you prefer using Docker, you can run PomodoroAI in a container:
+
+### Option 1: Using Docker Compose (Recommended)
+
+```bash
+# Clone the repository
+git clone https://github.com/Gnubee99/PomodoroAI.git
+cd PomodoroAI
+
+# Start the container
+docker-compose up -d
+
+# View logs (optional)
+docker-compose logs -f
+
+# Stop the container
+docker-compose down
+```
+
+### Option 2: Using Docker directly
+
+```bash
+# Build the image
+docker build -t pomodoro-ai .
+
+# Run the container with data persistence
+docker run -d \
+  --name pomodoro-ai \
+  -p 5000:5000 \
+  -v pomodoro-data:/data \
+  -e HOME=/data \
+  pomodoro-ai
+
+# View logs
+docker logs -f pomodoro-ai
+
+# Stop and remove the container
+docker stop pomodoro-ai
+docker rm pomodoro-ai
+```
+
+### Docker Notes
+- Data persists in a Docker volume named `pomodoro-data`
+- The container automatically restarts unless stopped manually
+- Access the app at **http://localhost:5000** just like the native installation
+- To remove all data: `docker volume rm pomodoro-data`
+
 ## Usage
 
 Start the Pomodoro timer web server:
