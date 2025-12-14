@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🍅 PomodoroAI Timer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            width: 100%;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+        
+        .timer-display {
+            text-align: center;
+            margin: 40px 0;
+        }
+        
+        .time {
+            font-size: 5em;
+            font-weight: bold;
+            color: #667eea;
+            font-family: 'Courier New', monospace;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .session-type {
+            font-size: 1.5em;
+            color: #666;
+            margin-top: 10px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin: 30px 0;
+        }
+        
+        button {
+            padding: 15px 30px;
+            font-size: 1.1em;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        .btn-work {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-break {
+            background: #48bb78;
+            color: white;
+        }
+        
+        .btn-custom {
+            background: #ed8936;
+            color: white;
+        }
+        
+        .btn-stop {
+            background: #f56565;
+            color: white;
+            grid-column: span 2;
+        }
+        
+        .btn-disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .stats {
+            margin-top: 40px;
+            padding-top: 30px;
+            border-top: 2px solid #eee;
+        }
+        
+        .stats h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+        }
+        
+        .today-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            display: block;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .history {
+            margin-top: 20px;
+        }
+        
+        .history-item {
+            background: #f7fafc;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .history-date {
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .history-details {
+            color: #666;
+            font-size: 0.95em;
+        }
+        
+        .bar-chart {
+            background: #667eea;
+            height: 20px;
+            border-radius: 4px;
+            margin-top: 5px;
+            transition: width 0.3s ease;
+        }
+        
+        .custom-input {
+            display: none;
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .custom-input input {
+            padding: 10px 20px;
+            font-size: 1.2em;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            width: 150px;
+            text-align: center;
+        }
+        
+        .custom-input button {
+            margin-left: 10px;
+            padding: 10px 20px;
+        }
+        
+        .progress-ring {
+            transform: rotate(-90deg);
+            margin: 20px auto;
+            display: block;
+        }
+        
+        .progress-ring-circle {
+            transition: stroke-dashoffset 0.35s;
+            transform-origin: 50% 50%;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🍅 PomodoroAI Timer</h1>
+        
+        <div class="timer-display">
+            <div class="time" id="time">25:00</div>
+            <div class="session-type" id="sessionType">Ready</div>
+        </div>
+        
+        <div class="controls">
+            <button class="btn-work" onclick="startWork()">Work (25 min)</button>
+            <button class="btn-break" onclick="startBreak()">Break (5 min)</button>
+            <button class="btn-custom" onclick="showCustomInput('work')">Custom Work</button>
+            <button class="btn-custom" onclick="showCustomInput('break')">Custom Break</button>
+            <button class="btn-stop" id="stopBtn" onclick="stopTimer()" disabled>Stop Timer</button>
+        </div>
+        
+        <div class="custom-input" id="customInput">
+            <input type="number" id="customMinutes" placeholder="Minutes" min="1" max="120">
+            <button onclick="startCustomTimer()">Start</button>
+            <button onclick="hideCustomInput()">Cancel</button>
+        </div>
+        
+        <div class="stats">
+            <h2>Today's Progress</h2>
+            <div class="today-stats">
+                <div class="stat-card">
+                    <span class="stat-value" id="workTime">0</span>
+                    <span class="stat-label">Work (min)</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value" id="breakTime">0</span>
+                    <span class="stat-label">Break (min)</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value" id="sessions">0</span>
+                    <span class="stat-label">Sessions</span>
+                </div>
+            </div>
+            
+            <h2>Recent Activity</h2>
+            <div class="history" id="history"></div>
+        </div>
+    </div>
+    
+    <script>
+        let timerInterval;
+        let customTimerType = 'work';
+        
+        // Constants
+        const POMODORO_DURATION_MINUTES = 25;
+        const BAR_WIDTH_SCALE_FACTOR = 20;
+        
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+        
+        function updateDisplay() {
+            fetch('/api/status')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('time').textContent = formatTime(data.remaining);
+                    
+                    if (data.running) {
+                        document.getElementById('sessionType').textContent = 
+                            data.session_type === 'work' ? '🔴 Working' : '💚 Break Time';
+                        document.getElementById('stopBtn').disabled = false;
+                        
+                        // Play sound when timer completes
+                        if (data.remaining === 0) {
+                            playCompletionSound();
+                        }
+                    } else {
+                        document.getElementById('sessionType').textContent = 'Ready';
+                        document.getElementById('stopBtn').disabled = true;
+                    }
+                });
+            
+            updateStats();
+        }
+        
+        function updateStats() {
+            fetch('/api/stats')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('workTime').textContent = data.today.work_time;
+                    document.getElementById('breakTime').textContent = data.today.break_time;
+                    document.getElementById('sessions').textContent = data.today.sessions;
+                    
+                    const historyDiv = document.getElementById('history');
+                    historyDiv.innerHTML = '';
+                    
+                    data.history.forEach(item => {
+                        if (item.sessions > 0) {
+                            const div = document.createElement('div');
+                            div.className = 'history-item';
+                            
+                            const barWidth = Math.min((item.work_time / POMODORO_DURATION_MINUTES) * BAR_WIDTH_SCALE_FACTOR, 100);
+                            
+                            div.innerHTML = `
+                                <div>
+                                    <div class="history-date">${item.date}</div>
+                                    <div class="history-details">
+                                        Work: ${item.work_time}m | Break: ${item.break_time}m | Sessions: ${item.sessions}
+                                    </div>
+                                    <div class="bar-chart" style="width: ${barWidth}%"></div>
+                                </div>
+                            `;
+                            historyDiv.appendChild(div);
+                        }
+                    });
+                });
+        }
+        
+        function startWork() {
+            startTimer(25 * 60, 'work');
+        }
+        
+        function startBreak() {
+            startTimer(5 * 60, 'break');
+        }
+        
+        function showCustomInput(type) {
+            customTimerType = type;
+            document.getElementById('customInput').style.display = 'block';
+            document.getElementById('customMinutes').focus();
+        }
+        
+        function hideCustomInput() {
+            document.getElementById('customInput').style.display = 'none';
+            document.getElementById('customMinutes').value = '';
+        }
+        
+        function startCustomTimer() {
+            const minutes = parseInt(document.getElementById('customMinutes').value);
+            if (minutes > 0 && minutes <= 120) {
+                startTimer(minutes * 60, customTimerType);
+                hideCustomInput();
+            } else {
+                alert('Please enter a valid number between 1 and 120 minutes.');
+            }
+        }
+        
+        function startTimer(duration, type) {
+            fetch('/api/start', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ duration: duration, type: type })
+            }).then(() => {
+                updateDisplay();
+            });
+        }
+        
+        function stopTimer() {
+            fetch('/api/stop', {
+                method: 'POST'
+            }).then(() => {
+                updateDisplay();
+            });
+        }
+        
+        function playCompletionSound() {
+            try {
+                // Create audio context for beep
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.value = 800;
+                oscillator.type = 'sine';
+                
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.5);
+            } catch (error) {
+                // Fallback: visual notification if audio fails
+                console.warn('Audio notification failed:', error);
+                document.getElementById('sessionType').style.animation = 'pulse 0.5s ease-in-out 3';
+            }
+        }
+        
+        // Update display every second
+        setInterval(updateDisplay, 1000);
+        
+        // Initial update
+        updateDisplay();
+        
+        // Handle Enter key in custom input
+        document.getElementById('customMinutes').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                startCustomTimer();
+            }
+        });
+    </script>
+</body>
+</html>
