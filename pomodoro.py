@@ -6,7 +6,7 @@ A web-based GUI Pomodoro timer with time tracking and statistics.
 
 from flask import Flask, render_template, jsonify, request
 import json
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from pathlib import Path
 import threading
 import time
@@ -52,23 +52,24 @@ class PomodoroTimer:
         """Record a completed session."""
         if session_type not in ("work", "break"):
             raise ValueError(f"Invalid session_type: {session_type}. Must be 'work' or 'break'.")
-        
-        today = date.today().isoformat()
-        
+
+        # Use UTC for consistent date storage across timezones
+        today = datetime.now(timezone.utc).date().isoformat()
+
         if today not in self.data:
             self.data[today] = {
                 "work_time": 0,
                 "break_time": 0,
                 "sessions": []
             }
-        
+
         self.data[today][f"{session_type}_time"] += duration_seconds
         self.data[today]["sessions"].append({
             "type": session_type,
             "duration": duration_seconds,
-            "completed_at": datetime.now().isoformat()
+            "completed_at": datetime.now(timezone.utc).isoformat()
         })
-        
+
         self.save_data()
     
     def start_timer(self, duration_seconds, session_type="work"):
@@ -142,7 +143,8 @@ class PomodoroTimer:
     
     def get_today_stats(self):
         """Get today's statistics."""
-        today = date.today().isoformat()
+        # Use UTC for consistent date retrieval across timezones
+        today = datetime.now(timezone.utc).date().isoformat()
         if today in self.data:
             day_data = self.data[today]
             return {

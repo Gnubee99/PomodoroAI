@@ -280,6 +280,36 @@
             const secs = seconds % 60;
             return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
         }
+
+        function formatUTCDateToLocal(utcDateString) {
+            // Parse UTC date string (YYYY-MM-DD) and convert to local timezone
+            const utcDate = new Date(utcDateString + 'T00:00:00Z');
+            const localDate = new Date(utcDate.getTime());
+
+            // Format the date in a user-friendly way
+            const today = new Date();
+            const yesterday = new Date(today);
+            yesterday.setDate(yesterday.getDate() - 1);
+
+            // Reset time parts for comparison
+            today.setHours(0, 0, 0, 0);
+            yesterday.setHours(0, 0, 0, 0);
+            localDate.setHours(0, 0, 0, 0);
+
+            if (localDate.getTime() === today.getTime()) {
+                return 'Today';
+            } else if (localDate.getTime() === yesterday.getTime()) {
+                return 'Yesterday';
+            } else {
+                // Format as "Mon, Dec 16, 2025"
+                return localDate.toLocaleDateString('en-US', {
+                    weekday: 'short',
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                });
+            }
+        }
         
         function updateDisplay() {
             fetch('/api/status')
@@ -320,12 +350,15 @@
                         if (item.sessions > 0) {
                             const div = document.createElement('div');
                             div.className = 'history-item';
-                            
+
                             const barWidth = Math.min((item.work_time / POMODORO_DURATION_MINUTES) * BAR_WIDTH_SCALE_FACTOR, 100);
-                            
+
+                            // Convert UTC date to local timezone for display
+                            const displayDate = formatUTCDateToLocal(item.date);
+
                             div.innerHTML = `
                                 <div>
-                                    <div class="history-date">${item.date}</div>
+                                    <div class="history-date">${displayDate}</div>
                                     <div class="history-details">
                                         Work: ${item.work_time}m | Break: ${item.break_time}m | Sessions: ${item.sessions}
                                     </div>
