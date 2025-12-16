@@ -28,7 +28,7 @@ class PomodoroTimer:
         self.session_type = None
         self.start_time = None
         self.duration = 0
-        self.lock = threading.Lock()
+        self.lock = threading.RLock()  # Use RLock to allow reentrant locking
     
     def load_data(self):
         """Load tracking data from file."""
